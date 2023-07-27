@@ -39,7 +39,7 @@ namespace EpsonProjectorEpi
                 config.Monitor = GetDefaultMonitorConfig();
 
             CommunicationMonitor = new GenericCommunicationMonitor(this, coms, config.Monitor);
-            var gather = new CommunicationGather(coms, "\x0D:");
+            var gather = new CommunicationGather(coms, "\x0D");
 
             _commandQueue = new GenericQueue(key + "-command-queue", 213, Thread.eThreadPriority.MediumPriority, 50);
 

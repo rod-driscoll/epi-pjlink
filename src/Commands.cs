@@ -16,7 +16,7 @@ namespace EpsonProjectorEpi
                 if (Coms == null || String.IsNullOrEmpty(Message))
                     return;
 
-                Coms.SendText(Message + "\x0D");
+                Coms.SendText("%1" + Message + "\x0D");
             }
 
             public override string ToString()
@@ -33,9 +33,9 @@ namespace EpsonProjectorEpi
         public const string MuteOff = "MUTE OFF";
         public const string FreezeOn = "FREEZE ON";
         public const string FreezeOff = "FREEZE OFF";
-        public const string PowerOn = "PWR ON";
-        public const string PowerOff = "PWR OFF";
-        public const string PowerPoll = "PWR?";
+        public const string PowerOn = "POWR 1";
+        public const string PowerOff = "POWR 0";
+        public const string PowerPoll = "POWR ?";
         public const string SourcePoll = "SOURCE?";
         public const string LampPoll = "LAMP?";
         public const string MutePoll = "MUTE?";
