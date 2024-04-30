@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Config;
 
-namespace EpsonProjectorEpi
+namespace PJLinkProjectorEpi
 {
     public class PropsConfig
     {

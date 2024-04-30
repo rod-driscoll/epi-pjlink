@@ -2,7 +2,7 @@ using System.Linq;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 
-namespace EpsonProjectorEpi
+namespace PJLinkProjectorEpi
 {
     public static class FeedbackExt
     {

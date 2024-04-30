@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 10.00
 # Visual Studio 2008
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EpsonProjectorEpi", "src\EpsonProjectorEpi.csproj", "{32895000-C827-4C7C-9C62-9C9AA9323A11}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PJLinkProjectorEpi", "src\PJLinkProjectorEpi.csproj", "{32895000-C827-4C7C-9C62-9C9AA9323A11}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

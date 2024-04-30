@@ -4,11 +4,11 @@ using Crestron.SimplSharpPro.DeviceSupport;
 using PepperDash.Core;
 using PepperDash.Essentials.Core;
 
-namespace EpsonProjectorEpi
+namespace PJLinkProjectorEpi
 {
     public class Bridge
     {
-        public static void LinkToApi(EpsonProjector proj, BasicTriList trilist, JoinMap joinMap)
+        public static void LinkToApi(PJLinkProjector proj, BasicTriList trilist, JoinMap joinMap)
         {
             SetupNameFb(proj, trilist, joinMap);
 

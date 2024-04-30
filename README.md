@@ -1,4 +1,6 @@
-# Essentials Plugin Template (c) 2020
+# PJLink Projector control plugin for Essentials
+
+Created using Essentials Plugin Template (c) 2020
 
 ## License
 

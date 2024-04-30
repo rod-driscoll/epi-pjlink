@@ -2,21 +2,21 @@
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Config;
 
-namespace EpsonProjectorEpi
+namespace PJLinkProjectorEpi
 {
-    public class DeviceFactory : EssentialsPluginDeviceFactory<EpsonProjector>
+    public class DeviceFactory : EssentialsPluginDeviceFactory<PJLinkProjector>
     {
         public DeviceFactory()
         {
             MinimumEssentialsFrameworkVersion = "1.8.1";
-            TypeNames = new List<string>() { "epsonProjector" };
+            TypeNames = new List<string>() { "PJLinkProjector", "pjlink" };
         }
 
         public override EssentialsDevice BuildDevice(DeviceConfig dc)
         {
             var props = PropsConfig.FromDeviceConfig(dc);
             var coms = CommFactory.CreateCommForDevice(dc);
-            var device = new EpsonProjector(dc.Key, dc.Name, props, coms);
+            var device = new PJLinkProjector(dc.Key, dc.Name, props, coms);
 
             return device;
         }

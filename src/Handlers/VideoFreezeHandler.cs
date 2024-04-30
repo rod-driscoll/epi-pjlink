@@ -1,13 +1,13 @@
 ﻿using System;
 using PepperDash.Core;
 
-namespace EpsonProjectorEpi
+namespace PJLinkProjectorEpi
 {
     public class VideoFreezeHandler : IKeyed
     {
-        public const string SearchString = "FREEZE=";
-        public const string VideoFreezeOffResponse = "FREEZE=OFF";
-        public const string VideoFreezeOnResponse = "FREEZE=ON";
+        public const string SearchString = Commands.Protocol1 + Commands.Freeze + "="; // "%1FREZ="
+        public const string VideoFreezeOffResponse = SearchString + Commands.Off;
+        public const string VideoFreezeOnResponse = SearchString + Commands.On;
 
         public enum VideoFreezeStatusEnum
         {

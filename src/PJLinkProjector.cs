@@ -8,10 +8,16 @@ using PepperDash.Essentials.Core.Bridges;
 using PepperDash.Essentials.Core.Queues;
 using Feedback = PepperDash.Essentials.Core.Feedback;
 using Thread = Crestron.SimplSharpPro.CrestronThread.Thread;
+using System.Collections.Generic;
 
-namespace EpsonProjectorEpi
+namespace PJLinkProjectorEpi
 {
-    public class EpsonProjector : EssentialsBridgeableDevice, IRoutingSinkWithSwitching, IHasPowerControlWithFeedback,
+    public interface IHasCommandPrefix
+    {
+        string Prefix { get; set; }
+    }
+
+    public class PJLinkProjector : EssentialsBridgeableDevice, IRoutingSinkWithSwitching, IHasPowerControlWithFeedback,
         IWarmingCooling, IOnline, IBasicVideoMuteWithFeedback, ICommunicationMonitor, IHasFeedback
     {
         private readonly IBasicCommunication _coms;
@@ -29,10 +35,13 @@ namespace EpsonProjectorEpi
         private VideoFreezeHandler.VideoFreezeStatusEnum _currentVideoFreezeStatus;
         private VideoFreezeHandler.VideoFreezeStatusEnum _requestedFreezeStatus;
 
-        private VideoInputHandler.VideoInputStatusEnum _currentVideoInput;
-        private VideoInputHandler.VideoInputStatusEnum _requestedVideoInput;
+        private uint _currentVideoInput;
+        private uint _requestedVideoInput;
 
-        public EpsonProjector(string key, string name, PropsConfig config, IBasicCommunication coms) : base(key, name)
+        private string Prefix = String.Empty;
+        private List<IHasCommandPrefix> DriversRequiringPrefix = new List<IHasCommandPrefix>();
+
+        public PJLinkProjector(string key, string name, PropsConfig config, IBasicCommunication coms) : base(key, name)
         {
             _coms = coms;
             if (config.Monitor == null)
@@ -43,29 +52,40 @@ namespace EpsonProjectorEpi
 
             _commandQueue = new GenericQueue(key + "-command-queue", 213, Thread.eThreadPriority.MediumPriority, 50);
 
-            InputPorts = new RoutingPortCollection<RoutingInputPort>
-                {
-                    new RoutingInputPort("Hdmi",
-                        eRoutingSignalType.Video,
-                        eRoutingPortConnectionType.Hdmi,
-                        VideoInputHandler.VideoInputStatusEnum.Hdmi,
-                        this) {Port = (int) VideoInputHandler.VideoInputStatusEnum.Hdmi},
-                    new RoutingInputPort("DVI",
-                        eRoutingSignalType.Video,
-                        eRoutingPortConnectionType.Dvi,
-                        VideoInputHandler.VideoInputStatusEnum.Dvi,
-                        this) {Port = (int) VideoInputHandler.VideoInputStatusEnum.Dvi},
-                    new RoutingInputPort("Computer",
-                        eRoutingSignalType.Video,
-                        eRoutingPortConnectionType.Vga,
-                        VideoInputHandler.VideoInputStatusEnum.Computer,
-                        this) {Port = (int) VideoInputHandler.VideoInputStatusEnum.Computer},
-                    new RoutingInputPort("Video",
+            InputPorts = new RoutingPortCollection<RoutingInputPort>();
+            for (uint i = 1; i < 10; i++)
+            {
+                string key_ = "RGB " + i.ToString();
+                InputPorts.Add(new RoutingInputPort(key_,
                         eRoutingSignalType.Video,
                         eRoutingPortConnectionType.Rgb,
+                        VideoInputHandler.VideoInputStatusEnum.RGB,
+                        this) { Port = Commands.SourceOffsetRGB + i });
+                key_ = "Video " + i.ToString();
+                InputPorts.Add(new RoutingInputPort(key_,
+                        eRoutingSignalType.Video,
+                        eRoutingPortConnectionType.Composite,
                         VideoInputHandler.VideoInputStatusEnum.Video,
-                        this) {Port = (int) VideoInputHandler.VideoInputStatusEnum.Video},
-                };
+                        this) { Port = Commands.SourceOffsetVideo + i });
+                key_ = "Digital " + i.ToString();
+                InputPorts.Add(new RoutingInputPort(key_,
+                        eRoutingSignalType.Video,
+                        eRoutingPortConnectionType.Hdmi,
+                        VideoInputHandler.VideoInputStatusEnum.Digital,
+                        this) { Port = Commands.SourceOffsetDigital + i });
+                key_ = "Storage " + i.ToString();
+                InputPorts.Add(new RoutingInputPort(key_,
+                        eRoutingSignalType.Video,
+                        eRoutingPortConnectionType.Streaming,
+                        VideoInputHandler.VideoInputStatusEnum.Storage,
+                        this) { Port = Commands.SourceOffsetStorage + i });
+                key_ = "Network " + i.ToString();
+                InputPorts.Add(new RoutingInputPort(key_,
+                        eRoutingSignalType.Video,
+                        eRoutingPortConnectionType.Composite,
+                        VideoInputHandler.VideoInputStatusEnum.Network,
+                        this) { Port = Commands.SourceOffsetNetwork + i });
+            }
 
             PowerIsOnFeedback =
                 new BoolFeedback("PowerIsOn", () => _currentPowerStatus == PowerHandler.PowerStatusEnum.PowerOn);
@@ -77,7 +97,7 @@ namespace EpsonProjectorEpi
                 new BoolFeedback("IsCoolingDown", () => _currentPowerStatus == PowerHandler.PowerStatusEnum.PowerCooling);
 
             PowerIsOffFeedback =
-                new BoolFeedback(() => _currentPowerStatus == PowerHandler.PowerStatusEnum.PowerOff);
+                new BoolFeedback(() => _currentPowerStatus == PowerHandler.PowerStatusEnum.PowerStandby);
 
             VideoMuteIsOn =
                 new BoolFeedback("VideoMuteIsOn", () => _currentVideoMuteStatus == VideoMuteHandler.VideoMuteStatusEnum.Muted && PowerIsOnFeedback.BoolValue);
@@ -103,9 +123,13 @@ namespace EpsonProjectorEpi
             var inputHandler = new VideoInputHandler(key);
             inputHandler.VideoInputUpdated += HandleVideoInputUpdated;
 
+            var authHandler = new AuthHandler(key);
+            authHandler.AuthStatusUpdated += HandleAuthStatusUpdated;
+
             new StringResponseProcessor(gather,
                 s =>
                     {
+                        authHandler.ProcessResponse(s);
                         powerHandler.ProcessResponse(s);
                         muteHandler.ProcessResponse(s);
                         freezeHandler.ProcessResponse(s);
@@ -114,9 +138,11 @@ namespace EpsonProjectorEpi
 
             LampHoursFeedback =
                 new LampHoursHandler(key, _commandQueue, gather, PowerIsOnFeedback).LampHoursFeedback;
+            DriversRequiringPrefix.Add(LampHoursFeedback as IHasCommandPrefix);
 
             SerialNumberFeedback =
                 new SerialNumberHandler(key, _commandQueue, gather, PowerIsOnFeedback).SerialNumberFeedback;
+            DriversRequiringPrefix.Add(SerialNumberFeedback as IHasCommandPrefix);
 
             CurrentInputValueFeedback =
                 new IntFeedback("CurrentInput",
@@ -129,33 +155,33 @@ namespace EpsonProjectorEpi
                         });
 
             Feedbacks = new FeedbackCollection<Feedback>
-                {
-                    PowerIsOnFeedback,
-                    IsWarmingUpFeedback,
-                    IsCoolingDownFeedback,
-                    PowerIsOffFeedback,
-                    VideoMuteIsOn,
-                    VideoMuteIsOff,
-                    VideoFreezeIsOn,
-                    VideoFreezeIsOff,
-                    CurrentInputValueFeedback,
-                    new StringFeedback("RequestedPower", () => _requestedPowerStatus.ToString()),
-                    new StringFeedback("RequestedMute", () => _requestedMuteStatus.ToString()),
-                    new StringFeedback("RequestedFreeze", () => _requestedFreezeStatus.ToString()),
-                    new StringFeedback("RequestedInput", () => _requestedVideoInput.ToString()),
-                };
+            {
+                PowerIsOnFeedback,
+                IsWarmingUpFeedback,
+                IsCoolingDownFeedback,
+                PowerIsOffFeedback,
+                VideoMuteIsOn,
+                VideoMuteIsOff,
+                VideoFreezeIsOn,
+                VideoFreezeIsOff,
+                CurrentInputValueFeedback,
+                new StringFeedback("RequestedPower", () => _requestedPowerStatus.ToString()),
+                new StringFeedback("RequestedMute", () => _requestedMuteStatus.ToString()),
+                new StringFeedback("RequestedFreeze", () => _requestedFreezeStatus.ToString()),
+                new StringFeedback("RequestedInput", () => _requestedVideoInput.ToString()),
+            };
 
             CrestronEnvironment.ProgramStatusEventHandler += type =>
-                {
-                    if (type != eProgramStatusEventType.Stopping)
-                        return;
+            {
+                if (type != eProgramStatusEventType.Stopping)
+                    return;
 
-                    if (_pollTimer == null)
-                        return;
+                if (_pollTimer == null)
+                    return;
 
-                    _pollTimer.Stop();
-                    _pollTimer.Dispose();
-                };
+                _pollTimer.Stop();
+                _pollTimer.Dispose();
+            };
         }
 
         private static CommunicationMonitorConfig GetDefaultMonitorConfig()
@@ -163,7 +189,7 @@ namespace EpsonProjectorEpi
             return new CommunicationMonitorConfig()
                 {
                     PollInterval = 30000,
-                    PollString = Commands.PowerPoll + "\x0D",
+                    PollString = Commands.Power + " ?\x0D",
                     TimeToWarning = 120000,
                     TimeToError = 360000,
                 };
@@ -176,31 +202,31 @@ namespace EpsonProjectorEpi
 
             _pollTimer = new CTimer(o =>
                 {
-                    _commandQueue.Enqueue(new Commands.EpsonCommand
+                    _commandQueue.Enqueue(new Commands.PJLinkCommand
                         {
                             Coms = _coms,
-                            Message = Commands.PowerPoll,
+                            Message = Prefix + Commands.Power + Commands.Query
                         });
 
                     if (!PowerIsOnFeedback.BoolValue)
                         return;
 
-                    _commandQueue.Enqueue(new Commands.EpsonCommand
+                    _commandQueue.Enqueue(new Commands.PJLinkCommand
                         {
                             Coms = _coms,
-                            Message = Commands.SourcePoll,
+                            Message = Prefix + Commands.Source + Commands.Query
                         });
 
-                    _commandQueue.Enqueue(new Commands.EpsonCommand
+                    _commandQueue.Enqueue(new Commands.PJLinkCommand
                     {
                         Coms = _coms,
-                        Message = Commands.MutePoll,
+                        Message = Prefix + Commands.Mute + Commands.Query
                     });
 
-                    _commandQueue.Enqueue(new Commands.EpsonCommand
+                    _commandQueue.Enqueue(new Commands.PJLinkCommand
                     {
                         Coms = _coms,
-                        Message = Commands.FreezePoll,
+                        Message = Prefix + Commands.Freeze + Commands.Query
                     });
                 },
                 null,
@@ -228,6 +254,15 @@ namespace EpsonProjectorEpi
                 bridge.AddJoinMap(Key, joinMap);
 
             Bridge.LinkToApi(this, trilist, joinMap);
+        }
+
+        private void HandleAuthStatusUpdated(object sender, Events.AuthEventArgs eventArgs)
+        {
+            Prefix = eventArgs.MD5;
+            if(!String.IsNullOrEmpty(Prefix))
+                Prefix = Prefix + Commands.Protocol1;
+            foreach(var driver in DriversRequiringPrefix)
+                driver.Prefix = Prefix; 
         }
 
         private void HandlePowerStatusUpdated(object sender, Events.PowerEventArgs eventArgs)
@@ -264,7 +299,7 @@ namespace EpsonProjectorEpi
                     break;
                 case PowerHandler.PowerStatusEnum.PowerCooling:
                     break;
-                case PowerHandler.PowerStatusEnum.PowerOff:
+                case PowerHandler.PowerStatusEnum.PowerStandby:
                     ProcessRequestedPowerOff();
                     break;
                 case PowerHandler.PowerStatusEnum.None:
@@ -289,7 +324,7 @@ namespace EpsonProjectorEpi
                     break;
                 case PowerHandler.PowerStatusEnum.PowerCooling:
                     break;
-                case PowerHandler.PowerStatusEnum.PowerOff:
+                case PowerHandler.PowerStatusEnum.PowerStandby:
                     _currentPowerStatus = PowerHandler.PowerStatusEnum.PowerWarming;
                     break;
 
@@ -299,16 +334,16 @@ namespace EpsonProjectorEpi
                     throw new ArgumentOutOfRangeException();
             }
 
-            _commandQueue.Enqueue(new Commands.EpsonCommand
+            _commandQueue.Enqueue(new Commands.PJLinkCommand
             {
                 Coms = _coms,
-                Message = Commands.PowerOn,
+                Message = Prefix + Commands.Power + " " + Commands.On,
             });
         }
 
         private void ProcessRequestedPowerOff()
         {
-            if (_requestedPowerStatus != PowerHandler.PowerStatusEnum.PowerOff)
+            if (_requestedPowerStatus != PowerHandler.PowerStatusEnum.PowerStandby)
                 throw new InvalidOperationException("Power off isn't requested");
        
             switch (_currentPowerStatus)
@@ -321,7 +356,7 @@ namespace EpsonProjectorEpi
                 case PowerHandler.PowerStatusEnum.PowerCooling:
                     _requestedPowerStatus = PowerHandler.PowerStatusEnum.None;
                     break;
-                case PowerHandler.PowerStatusEnum.PowerOff:
+                case PowerHandler.PowerStatusEnum.PowerStandby:
                     _requestedPowerStatus = PowerHandler.PowerStatusEnum.None;
                     break;
                 case PowerHandler.PowerStatusEnum.None:
@@ -330,10 +365,10 @@ namespace EpsonProjectorEpi
                     throw new ArgumentOutOfRangeException();
             }
 
-            _commandQueue.Enqueue(new Commands.EpsonCommand
+            _commandQueue.Enqueue(new Commands.PJLinkCommand
             {
                 Coms = _coms,
-                Message = Commands.PowerOff,
+                Message = Prefix + Commands.Power + " " + Commands.Off,
             });
         }
 
@@ -368,10 +403,10 @@ namespace EpsonProjectorEpi
                 _requestedMuteStatus = VideoMuteHandler.VideoMuteStatusEnum.None;
             }
 
-            _commandQueue.Enqueue(new Commands.EpsonCommand
+            _commandQueue.Enqueue(new Commands.PJLinkCommand
             {
                 Coms = _coms,
-                Message = Commands.MuteOn,
+                Message = Prefix + Commands.Mute + " " + Commands.On,
             });
         }
 
@@ -386,10 +421,10 @@ namespace EpsonProjectorEpi
                 _requestedMuteStatus = VideoMuteHandler.VideoMuteStatusEnum.None;
             }
 
-            _commandQueue.Enqueue(new Commands.EpsonCommand
+            _commandQueue.Enqueue(new Commands.PJLinkCommand
             {
                 Coms = _coms,
-                Message = Commands.MuteOff,
+                Message = Prefix + Commands.Mute + " " + Commands.Off,
             });
         }
 
@@ -424,10 +459,10 @@ namespace EpsonProjectorEpi
                 _requestedFreezeStatus = VideoFreezeHandler.VideoFreezeStatusEnum.None;
             }
 
-            _commandQueue.Enqueue(new Commands.EpsonCommand
+            _commandQueue.Enqueue(new Commands.PJLinkCommand
             {
                 Coms = _coms,
-                Message = Commands.FreezeOn,
+                Message = Prefix + Commands.Freeze + " " + Commands.On,
             });
         }
 
@@ -442,10 +477,10 @@ namespace EpsonProjectorEpi
                 _requestedFreezeStatus = VideoFreezeHandler.VideoFreezeStatusEnum.None;
             }
 
-            _commandQueue.Enqueue(new Commands.EpsonCommand
+            _commandQueue.Enqueue(new Commands.PJLinkCommand
             {
                 Coms = _coms,
-                Message = Commands.FreezeOff,
+                Message = Prefix + Commands.Freeze + " " + Commands.Off,
             });
         }
 
@@ -455,46 +490,15 @@ namespace EpsonProjectorEpi
                 return;
 
             if (_requestedVideoInput == _currentVideoInput)
-                _requestedVideoInput = VideoInputHandler.VideoInputStatusEnum.None;
+                _requestedVideoInput = 0;
 
-            switch (_requestedVideoInput)
+            if (_requestedVideoInput > 0)
             {
-                case VideoInputHandler.VideoInputStatusEnum.None:
-                    break;
-                case VideoInputHandler.VideoInputStatusEnum.Hdmi:
-                    _commandQueue.Enqueue(new Commands.EpsonCommand
-                        {
-                            Coms = _coms,
-                            Message = Commands.SourceHdmi,
-                        });
-                    break;
-
-                case VideoInputHandler.VideoInputStatusEnum.Dvi:
-                    _commandQueue.Enqueue(new Commands.EpsonCommand
-                        {
-                            Coms = _coms,
-                            Message = Commands.SourceDvi,
-                        });
-                    break;
-
-                case VideoInputHandler.VideoInputStatusEnum.Computer:
-                    _commandQueue.Enqueue(new Commands.EpsonCommand
-                        {
-                            Coms = _coms,
-                            Message = Commands.SourceComputer,
-                        });
-                    break;
-
-                case VideoInputHandler.VideoInputStatusEnum.Video:
-                    _commandQueue.Enqueue(new Commands.EpsonCommand
-                        {
-                            Coms = _coms,
-                            Message = Commands.SourceVideo,
-                        });
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException();
+                _commandQueue.Enqueue(new Commands.PJLinkCommand
+                {
+                    Coms = _coms,
+                    Message = Prefix + Commands.Source + " " + _requestedVideoInput.ToString()
+                });
             }
         }
 
@@ -599,10 +603,10 @@ namespace EpsonProjectorEpi
 
         public void PowerOff()
         {
-            _requestedPowerStatus = PowerHandler.PowerStatusEnum.PowerOff;
+            _requestedPowerStatus = PowerHandler.PowerStatusEnum.PowerStandby;
             _requestedMuteStatus = VideoMuteHandler.VideoMuteStatusEnum.None;
             _requestedFreezeStatus = VideoFreezeHandler.VideoFreezeStatusEnum.None;
-            _requestedVideoInput = VideoInputHandler.VideoInputStatusEnum.None;
+            _requestedVideoInput = 0;
 
             ProcessRequestedPowerStatus();
             Feedbacks.FireAllFeedbacks();
@@ -623,7 +627,7 @@ namespace EpsonProjectorEpi
                 case PowerHandler.PowerStatusEnum.PowerCooling:
                     break;
 
-                case PowerHandler.PowerStatusEnum.PowerOff:
+                case PowerHandler.PowerStatusEnum.PowerStandby:
                     PowerOn();
                     break;
 
@@ -638,10 +642,10 @@ namespace EpsonProjectorEpi
         {
             try
             {
-                var input = Convert.ToInt32(inputSelector);
+                var input = Convert.ToUInt32(inputSelector);
 
-                var inputToSwitch = (VideoInputHandler.VideoInputStatusEnum) input;
-                if (inputToSwitch == VideoInputHandler.VideoInputStatusEnum.None)
+                var inputToSwitch = input;
+                if (inputToSwitch == 0)
                     return;
 
                 _requestedVideoInput = inputToSwitch;
@@ -690,36 +694,36 @@ namespace EpsonProjectorEpi
 			string message; 
 			switch (function)
 			{
-				case eLensFunction.ZoomPlus:  message = Commands.ZoomInc; break;
-				case eLensFunction.ZoomMinus: message = Commands.ZoomDec; break;
-				case eLensFunction.FocusPlus: message = Commands.FocusInc; break;
-				case eLensFunction.FocusMinus: message = Commands.FocusDec; break;
-				case eLensFunction.HShiftPlus: message = Commands.HLensInc; break;
-				case eLensFunction.HShiftMinus: message = Commands.HLensDec; break;
-				case eLensFunction.VShiftPlus: message = Commands.VLensInc; break;
-				case eLensFunction.VShiftMinus: message = Commands.VLensDec; break;
+                //case eLensFunction.ZoomPlus:  message = Commands.ZoomInc; break;
+                //case eLensFunction.ZoomMinus: message = Commands.ZoomDec; break;
+                //case eLensFunction.FocusPlus: message = Commands.FocusInc; break;
+                //case eLensFunction.FocusMinus: message = Commands.FocusDec; break;
+                //case eLensFunction.HShiftPlus: message = Commands.HLensInc; break;
+                //case eLensFunction.HShiftMinus: message = Commands.HLensDec; break;
+                //case eLensFunction.VShiftPlus: message = Commands.VLensInc; break;
+                //case eLensFunction.VShiftMinus: message = Commands.VLensDec; break;
 				default: message = null; break;
 				
 			}
 			if (!string.IsNullOrEmpty(message))
 			{
-				_commandQueue.Enqueue(new Commands.EpsonCommand
+				_commandQueue.Enqueue(new Commands.PJLinkCommand
 				{
 					Coms = _coms,
-					Message = message
+                    Message = Prefix + message
 				});
 			}
 		}
 		public void LensPositionRecall(ushort memory)
 		{
-			if (memory > 0 && memory <= 10)
-			{
-				_commandQueue.Enqueue(new Commands.EpsonCommand
-				{
-					Coms = _coms,
-					Message = string.Format("POPLP {0}", Convert.ToByte(memory))
-				});
-			}
+            //if (memory > 0 && memory <= 10)
+            //{
+            //    _commandQueue.Enqueue(new Commands.PJLinkCommand
+            //    {
+            //        Coms = _coms,
+            //        Message = string.Format("{0}POPLP {1}", _authPrefix, Convert.ToByte(memory))
+            //    });
+            //}
 		}
         public BoolFeedback PowerIsOnFeedback { get; private set; }
         public BoolFeedback PowerIsOffFeedback { get; private set; }

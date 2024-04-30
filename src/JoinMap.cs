@@ -1,6 +1,6 @@
 ﻿using PepperDash.Essentials.Core;
 
-namespace EpsonProjectorEpi
+namespace PJLinkProjectorEpi
 {
     public class JoinMap : JoinMapBaseAdvanced
     {

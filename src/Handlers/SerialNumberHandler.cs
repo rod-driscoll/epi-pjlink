@@ -4,15 +4,21 @@ using PepperDash.Core;
 using PepperDash.Essentials.Core;
 using PepperDash.Essentials.Core.Queues;
 
-namespace EpsonProjectorEpi
+namespace PJLinkProjectorEpi
 {
-    public class SerialNumberHandler : IKeyed
-    {
+    public class SerialNumberHandler : IKeyed, IHasCommandPrefix
+    {        
         public string Key { get; private set; }
         private readonly GenericQueue _queue;
         private readonly CommunicationGather _gather;
         private CTimer _pollTimer;
         private string _serialNumber;
+        private string _prefix;
+        public string Prefix
+        {
+            get { return String.IsNullOrEmpty(_prefix) ? String.Empty : _prefix; }
+            set { _prefix = value; }
+        }
 
         public SerialNumberHandler(string key, GenericQueue queue, CommunicationGather gather, Feedback powerIsOn)
         {
@@ -32,7 +38,7 @@ namespace EpsonProjectorEpi
         private void HandleLineReceived(object sender, GenericCommMethodReceiveTextArgs genericCommMethodReceiveTextArgs)
         {
             var result = genericCommMethodReceiveTextArgs.Text;
-            if (!result.Contains("SNO="))
+            if (!result.Contains(Commands.Protocol1 + Commands.SerialNumber + "=")) // "%1SNUM="
                 return;
 
             var index = result.IndexOf("=", StringComparison.Ordinal) + 1;
@@ -48,10 +54,10 @@ namespace EpsonProjectorEpi
                 _pollTimer.Dispose();
             }
 
-            _pollTimer = new CTimer(o => _queue.Enqueue(new Commands.EpsonCommand
+            _pollTimer = new CTimer(o => _queue.Enqueue(new Commands.PJLinkCommand
                 {
                     Coms = _gather.Port as IBasicCommunication,
-                    Message = Commands.SerialNumberPoll,
+                    Message = Prefix + Commands.SerialNumber + Commands.Query, // "SNUM ?"
                 }), null, 23564);
         }
 

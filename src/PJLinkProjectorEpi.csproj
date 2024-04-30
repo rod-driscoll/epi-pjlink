@@ -7,8 +7,8 @@
     <ProjectGuid>{32895000-C827-4C7C-9C62-9C9AA9323A11}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>EpsonProjectorEpi</RootNamespace>
-    <AssemblyName>EpsonProjectorEpi</AssemblyName>
+    <RootNamespace>PJLinkProjectorEpi</RootNamespace>
+    <AssemblyName>PJLinkProjectorEpi</AssemblyName>
     <ProjectTypeGuids>{0B4745B0-194B-4BB6-8E21-E9057CA92300};{4D628B5B-2FBC-4AA6-8C16-197242AEB884};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <PlatformFamilyName>WindowsCE</PlatformFamilyName>
     <PlatformID>E2BECB1F-8C8C-41ba-B736-9BE7D946A398</PlatformID>
@@ -59,6 +59,10 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\PepperDashEssentials\lib\net35\PepperDash_Essentials_Core.dll</HintPath>
     </Reference>
+    <Reference Include="SimplSharpCryptographyInterface, Version=1.0.6197.21123, Culture=neutral, PublicKeyToken=1099c178b3b54c3b, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\..\..\..\..\ProgramData\Crestron\SDK\SimplSharpCryptographyInterface.dll</HintPath>
+    </Reference>
     <Reference Include="SimplSharpCustomAttributesInterface, Version=1.0.0.0, Culture=neutral, PublicKeyToken=1099c178b3b54c3b, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\..\..\..\..\ProgramData\Crestron\SDK\SimplSharpCustomAttributesInterface.dll</HintPath>
@@ -89,19 +93,20 @@
   <ItemGroup>
     <Compile Include="Bridge.cs" />
     <Compile Include="Commands.cs" />
+    <Compile Include="Handlers\AuthHandler.cs" />
+    <Compile Include="PJLinkProjector.cs" />
     <Compile Include="PropsConfig.cs" />
     <Compile Include="DeviceFactory.cs" />
-    <Compile Include="EpsonProjector.cs" />
     <Compile Include="JoinMap.cs" />
     <Compile Include="Events.cs" />
     <Compile Include="FeedbackExt.cs" />
-    <Compile Include="PowerHandler.cs" />
+    <Compile Include="Handlers\PowerHandler.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SerialNumberHandler.cs" />
-    <Compile Include="LampHoursHandler.cs" />
-    <Compile Include="VideoFreezeHandler.cs" />
-    <Compile Include="VideoInputHandler.cs" />
-    <Compile Include="VideoMuteHandler.cs" />
+    <Compile Include="Handlers\SerialNumberHandler.cs" />
+    <Compile Include="Handlers\LampHoursHandler.cs" />
+    <Compile Include="Handlers\VideoFreezeHandler.cs" />
+    <Compile Include="Handlers\VideoInputHandler.cs" />
+    <Compile Include="Handlers\VideoMuteHandler.cs" />
     <None Include="Properties\ControlSystem.cfg" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CompactFramework.CSharp.targets" />

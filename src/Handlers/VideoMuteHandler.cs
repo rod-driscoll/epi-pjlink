@@ -1,11 +1,16 @@
 ﻿using System;
 using PepperDash.Core;
 
-namespace EpsonProjectorEpi
+namespace PJLinkProjectorEpi
 {
     public class VideoMuteHandler : IKeyed
     {
-        public const string SearchString = "MUTE=";
+        public const string Mute = "AVMT"; // "AVMT ?"
+        public const string MuteVideo = "AVMT 1"; // "AVMT 10"
+        public const string MuteAudio = "AVMT 2";
+        public const string MuteAV = "AVMT 3";
+
+        public const string SearchString = Commands.Protocol1 + Commands.Mute + "="; // "%1AVMT="
         public const string VideoMuteOffResponse = "MUTE=OFF";
         public const string VideoMuteOnResponse = "MUTE=ON";
 

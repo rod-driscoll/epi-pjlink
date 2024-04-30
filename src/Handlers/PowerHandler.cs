@@ -1,21 +1,23 @@
 ﻿using System;
 using PepperDash.Core;
+using System.Text.RegularExpressions;
 
-namespace EpsonProjectorEpi
+namespace PJLinkProjectorEpi
 {
     public class PowerHandler : IKeyed
     {
-        public const string SearchString = "PWR=";
-        public const string PowerOffResponse = "PWR=00";
-        public const string PowerOnResponse = "PWR=01";
-        public const string WarmingResponse = "PWR=02";
-        public const string CoolingResponse = "PWR=03";
-        public const string StandbyResponse = "PWR=04";
-        public const string AbnormalStandbyResponse = "PWR=05";
+        public const string SearchString = Commands.Protocol1 + Commands.Power + "="; // "%1POWR="
+        //public const string PowerOffResponse = SearchString + Commands.Standby;  // "%1POWR=0"
+        public const string PowerOnResponse = SearchString + Commands.On;
+        public const string WarmingResponse = SearchString + Commands.Warming;
+        public const string CoolingResponse = SearchString + Commands.Cooling;
+        public const string StandbyResponse = SearchString + Commands.Off;
+
+        public const string ErrorResponse = SearchString + Commands.Err; // "%1POWR=ERR"
 
         public enum PowerStatusEnum
         {
-            PowerOn = 1, PowerWarming = 2, PowerCooling = 3, PowerOff = 4, None = 0
+            PowerOn = 1, PowerWarming = 2, PowerCooling = 3, PowerStandby = 4, Error = 5, None = 0
         }
 
         public event EventHandler<Events.PowerEventArgs> PowerStatusUpdated;
@@ -27,14 +29,14 @@ namespace EpsonProjectorEpi
 
         public void ProcessResponse(string response)
         {
-            if (!response.Contains(SearchString))
+            if (!response.Contains(SearchString)) //"%1POWR="
                 return;
 
-            if (response.Contains(PowerOffResponse))
+            if (response.Contains(StandbyResponse))
             {
                 OnPowerUpdated(new Events.PowerEventArgs
                     {
-                        Status = PowerStatusEnum.PowerOff,
+                        Status = PowerStatusEnum.PowerStandby,
                     });
 
                 return;
@@ -50,24 +52,25 @@ namespace EpsonProjectorEpi
                 return;
             }
 
-            if (response.Contains(StandbyResponse))
+            if (response.Contains(ErrorResponse))
             {
                 OnPowerUpdated(new Events.PowerEventArgs
                 {
-                    Status = PowerStatusEnum.PowerOff,
+                    Status = PowerStatusEnum.Error,
                 });
 
-                return;
-            }
 
-            if (response.Contains(AbnormalStandbyResponse))
-            {
-                OnPowerUpdated(new Events.PowerEventArgs
+                Match result = Regex.Match(response, ErrorResponse + @"(\d)"); //@"%1POWR=ERR(\d)"
+                if (result.Success)
                 {
-                    Status = PowerStatusEnum.PowerOff,
-                });
-
-                Debug.Console(1, this, Debug.ErrorLogLevel.Warning, "Received abnormal power status");
+                    var msg_ = String.Format("Received power status ERROR: '{0}'", result.Groups[1].Value);
+                    if(Commands.ErrorMessage.ContainsKey(result.Groups[1].Value))
+                        msg_ = msg_ + ": " + Commands.ErrorMessage[result.Groups[1].Value];
+                    Debug.Console(1, this, Debug.ErrorLogLevel.Warning, msg_);
+                }
+                else
+                Debug.Console(1, this, Debug.ErrorLogLevel.Warning,
+                    String.Format("Received power status ERROR: '{0}'", ErrorResponse));
                 return;
             }
 
