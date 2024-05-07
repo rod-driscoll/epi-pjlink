@@ -17,7 +17,7 @@ namespace PJLinkProjectorEpi
                 if (Coms == null || String.IsNullOrEmpty(Message))
                     return;
 
-                Coms.SendText("%1" + Message + "\x0D");
+                Coms.SendText(Message + "\x0D");
             }
 
             public override string ToString()
@@ -43,9 +43,10 @@ namespace PJLinkProjectorEpi
         public const string AuthNotice = "PJLINK";
         public const string AuthError = "ERRA"; // "PJLINK ERRA"
         public const string ErrorStatus = "ERST";
-        public const string Protocol1 = "%1";
+        public const string Protocol1 = "%1"; // %1
+        public const string Protocol2 = "%2";
         public const string Query = " ?";
-
+        public const string Ack = "OK";
 
         public const string Power = "POWR"; // e.g. "POWR ?", "POWR 1", "POWR="
         public const string Off = "0";
@@ -70,11 +71,17 @@ namespace PJLinkProjectorEpi
         public const uint SourceOffsetNetwork = 50;
 
         public const string Mute = "AVMT"; // "AVMT ?"
-        public const string MuteVideo = "AVMT 1"; // "AVMT 10"
-        public const string MuteAudio = "AVMT 2";
-        public const string MuteAV = "AVMT 3";
+        public const string Video = "1"; // "AVMT 10"
+        public const string Audio = "2";
+        public const string AV = "3";
+        public const string MuteVideo = "AVMT " + Video; // "AVMT 10"
+        public const string MuteAudio = "AVMT " + Audio;
+        public const string MuteAV = "AVMT " + AV;
+
         public const string Volume = "SVOL";
         public const string MicVolume = "MVOL";
+        public const string Down = "0";
+        public const string Up = "1";
 
         public const string Freeze = "FREZ";
 

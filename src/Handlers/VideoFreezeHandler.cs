@@ -5,7 +5,7 @@ namespace PJLinkProjectorEpi
 {
     public class VideoFreezeHandler : IKeyed
     {
-        public const string SearchString = Commands.Protocol1 + Commands.Freeze + "="; // "%1FREZ="
+        public const string SearchString = Commands.Freeze + "="; // "%1FREZ="
         public const string VideoFreezeOffResponse = SearchString + Commands.Off;
         public const string VideoFreezeOnResponse = SearchString + Commands.On;
 

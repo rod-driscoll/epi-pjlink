@@ -24,9 +24,9 @@ namespace PJLinkProjectorEpi
             public uint Input { get; set; }
         }
 
-        public class AuthEventArgs : EventArgs
+        public class StringEventArgs : EventArgs
         {
-            public string MD5 { get; set; }
+            public string Val { get; set; }
         }
     }
 }

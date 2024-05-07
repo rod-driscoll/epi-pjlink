@@ -6,7 +6,7 @@ namespace PJLinkProjectorEpi
 {
     public class VideoInputHandler : IKeyed
     {
-        public const string SearchString = Commands.Protocol1 + Commands.Source + "="; // "%1INPT="
+        public const string SearchString = Commands.Source + "="; // "%1INPT="
         public const string ErrorResponse = SearchString + Commands.Err; // "%1INPT=ERR"
 
         public enum VideoInputStatusEnum
@@ -29,7 +29,7 @@ namespace PJLinkProjectorEpi
             Match result = Regex.Match(response, SearchString + @"(\d+)"); //@"%1INPT=(\d+)"
             if (result.Success)
             {
-                OnMuteUpdated(new Events.VideoInputEventArgs
+                OnVideoInputUpdated(new Events.VideoInputEventArgs
                 {
                     Input = Convert.ToUInt32(result.Groups[1].Value),
                 });
@@ -39,7 +39,7 @@ namespace PJLinkProjectorEpi
             Debug.Console(1, this, Debug.ErrorLogLevel.Notice, "Received an unknown video input response:{0}", response);
         }
 
-        private void OnMuteUpdated(Events.VideoInputEventArgs args)
+        private void OnVideoInputUpdated(Events.VideoInputEventArgs args)
         {
             var handler = VideoInputUpdated;
             if (handler == null)

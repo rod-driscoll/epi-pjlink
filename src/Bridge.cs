@@ -49,47 +49,6 @@ namespace PJLinkProjectorEpi
             proj.LampHoursFeedback.LinkInputSig(trilist.UShortInput[joinMap.LampHours.JoinNumber]);
             proj.CurrentInputValueFeedback.LinkInputSig(trilist.UShortInput[joinMap.InputSelectOffset.JoinNumber]);
             proj.SerialNumberFeedback.LinkInputSig(trilist.StringInput[joinMap.SerialNumber.JoinNumber]);
-			trilist.SetUShortSigAction(joinMap.LensPositionMemory.JoinNumber, (i) => proj.LensPositionRecall(i));
-			trilist.SetSigHeldAction(joinMap.HShiftPlus.JoinNumber, 250, 
-				() => proj.StartLensMoveRepeat(eLensFunction.HShiftPlus),
-				() => proj.StopLensMoveRepeat(),
-				() => proj.LensFunction(eLensFunction.HShiftPlus)
-			);
-			trilist.SetSigHeldAction(joinMap.HShiftMinus.JoinNumber, 250,
-				() => proj.StartLensMoveRepeat(eLensFunction.HShiftMinus),
-				() => proj.StopLensMoveRepeat(),
-				() => proj.LensFunction(eLensFunction.HShiftMinus)
-			);
-			trilist.SetSigHeldAction(joinMap.VShiftPlus.JoinNumber, 250,
-				() => proj.StartLensMoveRepeat(eLensFunction.VShiftPlus),
-				() => proj.StopLensMoveRepeat(),
-				() => proj.LensFunction(eLensFunction.VShiftPlus)
-			);
-			trilist.SetSigHeldAction(joinMap.VShiftMinus.JoinNumber, 250,
-				() => proj.StartLensMoveRepeat(eLensFunction.VShiftMinus),
-				() => proj.StopLensMoveRepeat(),
-				() => proj.LensFunction(eLensFunction.VShiftMinus)
-			);
-			trilist.SetSigHeldAction(joinMap.ZoomPlus.JoinNumber, 250,
-				() => proj.StartLensMoveRepeat(eLensFunction.ZoomPlus),
-				() => proj.StopLensMoveRepeat(),
-				() => proj.LensFunction(eLensFunction.ZoomPlus)
-			);
-			trilist.SetSigHeldAction(joinMap.ZoomMinus.JoinNumber, 250,
-				() => proj.StartLensMoveRepeat(eLensFunction.ZoomMinus),
-				() => proj.StopLensMoveRepeat(),
-				() => proj.LensFunction(eLensFunction.ZoomMinus)
-			);
-			trilist.SetSigHeldAction(joinMap.FocusPlus.JoinNumber, 250,
-				() => proj.StartLensMoveRepeat(eLensFunction.FocusPlus),
-				() => proj.StopLensMoveRepeat(),
-				() => proj.LensFunction(eLensFunction.FocusPlus)
-			);
-			trilist.SetSigHeldAction(joinMap.FocusMinus.JoinNumber, 250,
-				() => proj.StartLensMoveRepeat(eLensFunction.FocusMinus),
-				() => proj.StopLensMoveRepeat(),
-				() => proj.LensFunction(eLensFunction.FocusMinus)
-			);
         }
 
         private static void LinkInputSelect(IRoutingSinkWithSwitching proj, BasicTriList trilist, JoinMap joinMap, int x)

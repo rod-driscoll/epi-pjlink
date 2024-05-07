@@ -13,7 +13,7 @@ namespace PJLinkProjectorEpi
 
         public string Password { private get; set; }
 
-        public event EventHandler<Events.AuthEventArgs> AuthStatusUpdated;
+        public event EventHandler<Events.StringEventArgs> AuthUpdated;
 
         public AuthHandler(string key)
         {
@@ -44,33 +44,32 @@ namespace PJLinkProjectorEpi
             if (!response.Contains(SearchString)) //"PJLINK "
                 return;
 
+            if (response.Contains(SearchString + Commands.Off)) //"PJLINK 0" no auth required
+            {
+                Debug.Console(1, this, "Received authentication request string: '0'");
+                OnAuthUpdated(new Events.StringEventArgs
+                {
+                    Val = String.Empty
+                });
+                return;
+            }
             if (response.Contains(SearchString + Commands.On)) //"PJLINK 1" auth required
             {
                 Match result = Regex.Match(response, SearchString + Commands.On + @" (\d)"); //@"%1POWR=ERR(\d)"
                 if (result.Success)
                 {
-                    Debug.Console(1, this, Debug.ErrorLogLevel.Notice,
-                       String.Format("Received authentication request string: '{0}'", result.Groups[1].Value));
-                    string hash = GenerateMD5Hash(result.Groups[1].Value + Password);
-                    Debug.Console(1, this, Debug.ErrorLogLevel.Notice, "MD5 Hash for PJLink Authentication: " + hash);
+                    Debug.Console(1, this, "Received authentication request string: '{0}'", result.Groups[1].Value);
+                    string hash = result.Groups[1].Value.Equals("0") 
+                        ? "" : GenerateMD5Hash(result.Groups[1].Value + Password);
+                    Debug.Console(1, this, "MD5 Hash for PJLink Authentication: " + hash);
 
-                    OnAuthUpdated(new Events.AuthEventArgs
+                    OnAuthUpdated(new Events.StringEventArgs
                     {
-                        MD5 = hash,
+                        Val = hash
                     });
                 }
                 else
-                    Debug.Console(1, this, Debug.ErrorLogLevel.Warning,
-                        String.Format("Authentication ERROR: '{0}'", response));
-                return;
-            }
-            if (response.Contains(SearchString + Commands.Off)) //"PJLINK 0" no auth required
-            {
-                OnAuthUpdated(new Events.AuthEventArgs
-                {
-                    MD5 = "",
-                });
-
+                    Debug.Console(1, this, Debug.ErrorLogLevel.Warning, "Authentication ERROR: '{0}'", response);
                 return;
             }
 
@@ -80,14 +79,18 @@ namespace PJLinkProjectorEpi
                 return;
             }
 
-            Debug.Console(1, this, Debug.ErrorLogLevel.Notice, "Received an unknown auth response:{0}", response);
+            Debug.Console(1, this, "Received an unknown auth response:{0}", response);
         }
 
-        private void OnAuthUpdated(Events.AuthEventArgs args)
+        private void OnAuthUpdated(Events.StringEventArgs args)
         {
-            var handler = AuthStatusUpdated;
+            var handler = AuthUpdated;
             if (handler == null)
                 return;
+            if (args == null)
+                Debug.Console(1, this, "OnAuthUpdated args == null");
+            else if (args.Val == null)
+                Debug.Console(1, this, "OnAuthUpdated Val == null");
 
             handler.Invoke(this, args);
         }

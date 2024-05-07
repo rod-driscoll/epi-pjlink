@@ -6,18 +6,19 @@ namespace PJLinkProjectorEpi
 {
     public class PowerHandler : IKeyed
     {
-        public const string SearchString = Commands.Protocol1 + Commands.Power + "="; // "%1POWR="
+        public const string SearchString = Commands.Power + "="; // "POWR="
         //public const string PowerOffResponse = SearchString + Commands.Standby;  // "%1POWR=0"
         public const string PowerOnResponse = SearchString + Commands.On;
         public const string WarmingResponse = SearchString + Commands.Warming;
         public const string CoolingResponse = SearchString + Commands.Cooling;
         public const string StandbyResponse = SearchString + Commands.Off;
+        public const string AckResponse = SearchString + Commands.Ack;
 
         public const string ErrorResponse = SearchString + Commands.Err; // "%1POWR=ERR"
 
         public enum PowerStatusEnum
         {
-            PowerOn = 1, PowerWarming = 2, PowerCooling = 3, PowerStandby = 4, Error = 5, None = 0
+            None = 0, PowerOn = 1, PowerWarming = 2, PowerCooling = 3, PowerStandby = 4, Error = 5 
         }
 
         public event EventHandler<Events.PowerEventArgs> PowerStatusUpdated;
@@ -63,14 +64,13 @@ namespace PJLinkProjectorEpi
                 Match result = Regex.Match(response, ErrorResponse + @"(\d)"); //@"%1POWR=ERR(\d)"
                 if (result.Success)
                 {
-                    var msg_ = String.Format("Received power status ERROR: '{0}'", result.Groups[1].Value);
+                    var msg_ = String.Format("Received power status error: '{0}'", result.Groups[1].Value);
                     if(Commands.ErrorMessage.ContainsKey(result.Groups[1].Value))
                         msg_ = msg_ + ": " + Commands.ErrorMessage[result.Groups[1].Value];
-                    Debug.Console(1, this, Debug.ErrorLogLevel.Warning, msg_);
+                    Debug.Console(1, this, msg_);
                 }
                 else
-                Debug.Console(1, this, Debug.ErrorLogLevel.Warning,
-                    String.Format("Received power status ERROR: '{0}'", ErrorResponse));
+                    Debug.Console(1, this, "Received power status ERROR: '{0}'", ErrorResponse);
                 return;
             }
 
@@ -94,7 +94,13 @@ namespace PJLinkProjectorEpi
                 return;
             }
 
+            if (response.Contains(AckResponse))
+            {
+                return;
+            }
+
             Debug.Console(1, this, Debug.ErrorLogLevel.Notice, "Received an unknown power response:{0}", response);
+            Debug.Console(1, this, Debug.ErrorLogLevel.Notice, "AckResponse: {0}", AckResponse);
         }
 
         private void OnPowerUpdated(Events.PowerEventArgs args)

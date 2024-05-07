@@ -94,6 +94,7 @@
     <Compile Include="Bridge.cs" />
     <Compile Include="Commands.cs" />
     <Compile Include="Handlers\AuthHandler.cs" />
+    <Compile Include="Handlers\ClassHandler.cs" />
     <Compile Include="PJLinkProjector.cs" />
     <Compile Include="PropsConfig.cs" />
     <Compile Include="DeviceFactory.cs" />

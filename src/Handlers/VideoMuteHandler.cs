@@ -5,14 +5,13 @@ namespace PJLinkProjectorEpi
 {
     public class VideoMuteHandler : IKeyed
     {
-        public const string Mute = "AVMT"; // "AVMT ?"
-        public const string MuteVideo = "AVMT 1"; // "AVMT 10"
-        public const string MuteAudio = "AVMT 2";
-        public const string MuteAV = "AVMT 3";
-
-        public const string SearchString = Commands.Protocol1 + Commands.Mute + "="; // "%1AVMT="
-        public const string VideoMuteOffResponse = "MUTE=OFF";
-        public const string VideoMuteOnResponse = "MUTE=ON";
+        public const string SearchString = Commands.Mute + "="; // "%1AVMT="
+        public const string VideoMuteOffResponse= SearchString + Commands.Video + Commands.Off; //"AVMT=10"
+        public const string VideoMuteOnResponse = SearchString + Commands.Video + Commands.On;
+        public const string AudioMuteOffResponse= SearchString + Commands.Audio + Commands.Off;
+        public const string AudioMuteOnResponse = SearchString + Commands.AV + Commands.On;
+        public const string AVMuteOffResponse   = SearchString + Commands.AV + Commands.Off;
+        public const string AVMuteOnResponse = SearchString + Commands.AV + Commands.On;
 
         public enum VideoMuteStatusEnum
         {
@@ -20,6 +19,7 @@ namespace PJLinkProjectorEpi
         }
 
         public event EventHandler<Events.VideoMuteEventArgs> VideoMuteStatusUpdated;
+        public event EventHandler<Events.VideoMuteEventArgs> AudioMuteStatusUpdated;
 
         public VideoMuteHandler(string key)
         {
@@ -30,33 +30,78 @@ namespace PJLinkProjectorEpi
         {
             if (!response.Contains(SearchString))
                 return;
-
             if (response.Contains(VideoMuteOffResponse))
             {
-                OnMuteUpdated(new Events.VideoMuteEventArgs
-                    {
-                        Status = VideoMuteStatusEnum.Unmuted,
-                    });
-
+                OnVideoMuteUpdated(new Events.VideoMuteEventArgs
+                {
+                    Status = VideoMuteStatusEnum.Unmuted,
+                });
                 return;
             }
-
             if (response.Contains(VideoMuteOnResponse))
             {
-                OnMuteUpdated(new Events.VideoMuteEventArgs
-                    {
-                        Status = VideoMuteStatusEnum.Muted,
-                    });
+                OnVideoMuteUpdated(new Events.VideoMuteEventArgs
+                {
+                    Status = VideoMuteStatusEnum.Muted,
+                });
+                return;
+            }
+            if (response.Contains(AVMuteOffResponse))
+            {
+                OnVideoMuteUpdated(new Events.VideoMuteEventArgs
+                {
+                    Status = VideoMuteStatusEnum.Unmuted,
+                });
+                OnAudioMuteUpdated(new Events.VideoMuteEventArgs
+                {
+                    Status = VideoMuteStatusEnum.Unmuted,
+                });
+                return;
+            }
+            if (response.Contains(AVMuteOnResponse))
+            {
+                OnVideoMuteUpdated(new Events.VideoMuteEventArgs
+                {
+                    Status = VideoMuteStatusEnum.Muted,
+                });
+                OnAudioMuteUpdated(new Events.VideoMuteEventArgs
+                {
+                    Status = VideoMuteStatusEnum.Muted,
+                });
 
                 return;
             }
+            if (response.Contains(AudioMuteOffResponse))
+            {
+                OnAudioMuteUpdated(new Events.VideoMuteEventArgs
+                {
+                    Status = VideoMuteStatusEnum.Unmuted,
+                });
+                return;
+            }
+            if (response.Contains(AudioMuteOnResponse))
+            {
+                OnAudioMuteUpdated(new Events.VideoMuteEventArgs
+                {
+                    Status = VideoMuteStatusEnum.Muted,
+                });
+                return;
+            }
 
-            Debug.Console(1, this, Debug.ErrorLogLevel.Notice, "Received an unknown mute response:{0}", response);
+            Debug.Console(1, this, "Received an unknown mute response:{0}", response);
         }
 
-        private void OnMuteUpdated(Events.VideoMuteEventArgs args)
+        private void OnVideoMuteUpdated(Events.VideoMuteEventArgs args)
         {
             var handler = VideoMuteStatusUpdated;
+            if (handler == null)
+                return;
+
+            handler.Invoke(this, args);
+        }
+        private void OnAudioMuteUpdated(Events.VideoMuteEventArgs args)
+        {
+            var handler = AudioMuteStatusUpdated;
             if (handler == null)
                 return;
 

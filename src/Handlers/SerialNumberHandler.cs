@@ -6,18 +6,24 @@ using PepperDash.Essentials.Core.Queues;
 
 namespace PJLinkProjectorEpi
 {
-    public class SerialNumberHandler : IKeyed, IHasCommandPrefix
+    public class SerialNumberHandler : IKeyed, IHasCommandAuthString
     {        
         public string Key { get; private set; }
         private readonly GenericQueue _queue;
         private readonly CommunicationGather _gather;
         private CTimer _pollTimer;
         private string _serialNumber;
-        private string _prefix;
-        public string Prefix
+        private string _authString;
+        public string AuthString
         {
-            get { return String.IsNullOrEmpty(_prefix) ? String.Empty : _prefix; }
-            set { _prefix = value; }
+            get { return String.IsNullOrEmpty(_authString) ? String.Empty : _authString; }
+            set { _authString = value; }
+        }        
+        private string _classString;
+        public string ClassString
+        {
+            get { return String.IsNullOrEmpty(_classString) ? String.Empty : _classString; }
+            set { _classString = value; }
         }
 
         public SerialNumberHandler(string key, GenericQueue queue, CommunicationGather gather, Feedback powerIsOn)
@@ -38,7 +44,7 @@ namespace PJLinkProjectorEpi
         private void HandleLineReceived(object sender, GenericCommMethodReceiveTextArgs genericCommMethodReceiveTextArgs)
         {
             var result = genericCommMethodReceiveTextArgs.Text;
-            if (!result.Contains(Commands.Protocol1 + Commands.SerialNumber + "=")) // "%1SNUM="
+            if (!result.Contains(Commands.SerialNumber + "=")) // "%1SNUM="
                 return;
 
             var index = result.IndexOf("=", StringComparison.Ordinal) + 1;
@@ -54,11 +60,18 @@ namespace PJLinkProjectorEpi
                 _pollTimer.Dispose();
             }
 
-            _pollTimer = new CTimer(o => _queue.Enqueue(new Commands.PJLinkCommand
+            _pollTimer = new CTimer(o => 
                 {
-                    Coms = _gather.Port as IBasicCommunication,
-                    Message = Prefix + Commands.SerialNumber + Commands.Query, // "SNUM ?"
-                }), null, 23564);
+                    if(String.Equals(ClassString, Commands.Protocol2))
+                    {
+                        _queue.Enqueue(new Commands.PJLinkCommand
+                        {
+                            Coms = _gather.Port as IBasicCommunication,
+                            Message = AuthString + Commands.Protocol2 + Commands.SerialNumber + Commands.Query, // "SNUM ?"
+                        });
+                    }
+                }
+                , null, 23564);
         }
 
         public StringFeedback SerialNumberFeedback { get; private set; }
