@@ -28,6 +28,7 @@ namespace PJLinkProjectorEpi
             Match result = Regex.Match(response, SearchString + @"(\d+)"); //@"CLSS=(\d+)"
             if (result.Success)
             {
+                Class = "%" + result.Groups[1].Value;
                 OnClassUpdated(new Events.StringEventArgs
                 {
                     Val = result.Groups[1].Value,
@@ -49,7 +50,7 @@ namespace PJLinkProjectorEpi
             else if (args.Val == null)
                 Debug.Console(1, this, "OnClassUpdated Val == null");
             else
-                Debug.Console(1, this, "OnClassUpdated {0}", args.Val);
+                Debug.Console(1, this, "OnClassUpdated({0})", args.Val);
 
             handler.Invoke(this, args);
         }
