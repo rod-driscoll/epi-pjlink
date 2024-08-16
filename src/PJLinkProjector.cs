@@ -194,7 +194,7 @@ namespace PJLinkProjectorEpi
 
             _pollTimer = new CTimer(o =>
                 {
-                    Debug.Console(1, this, "Polling, IsOnline: {0}, Status: {1}, IsConnected: {2}, ", CommunicationMonitor.IsOnlineFeedback.BoolValue, CommunicationMonitor.Status, _coms.IsConnected);
+                    Debug.Console(2, this, "Polling, IsOnline: {0}, Status: {1}, IsConnected: {2}, ", CommunicationMonitor.IsOnlineFeedback.BoolValue, CommunicationMonitor.Status, _coms.IsConnected);
                     if (!CommunicationMonitor.IsOnlineFeedback.BoolValue)
                     {
                         CommunicationMonitor.Stop();
@@ -285,7 +285,7 @@ namespace PJLinkProjectorEpi
  
         private void HandlePowerStatusUpdated(object sender, Events.PowerEventArgs eventArgs)
         {
-            Debug.Console(1, this, "HandlePowerStatusUpdated Status: '{0}'", eventArgs.Status);
+            Debug.Console(2, this, "HandlePowerStatusUpdated Status: '{0}'", eventArgs.Status);
             _currentPowerStatus = eventArgs.Status;
             ProcessRequestedPowerStatus();
             Feedbacks.FireAllFeedbacks();
@@ -471,13 +471,20 @@ namespace PJLinkProjectorEpi
 
         private void GetPower()
         {
-            var msg_ = MakeQueryCommand(Commands.Power);
-            Debug.Console(1, this, "GetPower() '{0}'", msg_);
-            _commandQueue.Enqueue(new Commands.PJLinkCommand
+            try
             {
-                Coms = _coms,
-                Message = msg_
-            });
+                var msg_ = MakeQueryCommand(Commands.Power);
+                Debug.Console(2, this, "GetPower('{0}')", msg_);
+                _commandQueue.Enqueue(new Commands.PJLinkCommand
+                {
+                    Coms = _coms,
+                    Message = msg_
+                });
+            }
+            catch (Exception e)
+            {
+                Debug.Console(0, this, "GetPower ERROR: {0}", e.Message);
+            }
         }
 
         public BoolFeedback PowerIsOnFeedback { get; private set; }
@@ -938,33 +945,42 @@ namespace PJLinkProjectorEpi
 
         #endregion video freeze
         #region class
-        private void UpdateDriversRequiringAuthString()
+        private void UpdateDriversRequiringAuthString(string authString, string classString)
         {
-            if (DriversRequiringAuthString != null)
+            try
             {
-                foreach (var driver in DriversRequiringAuthString)
+               if (DriversRequiringAuthString != null)
                 {
-                    //Debug.Console(0, this, "HandleAuthStatusUpdated driver {0}", driver == null ? "== null" : driver.GetType().ToString());
-                    driver.AuthString = AuthString;
-                    driver.ClassString = ClassString;
-                }
-            }   
+                    foreach (var driver in DriversRequiringAuthString)
+                    {
+                        //Debug.Console(0, this, "HandleAuthStatusUpdated driver {0}", driver == null ? "== null" : driver.GetType().ToString());
+                        if (authString != null)
+                            driver.AuthString = authString;
+                        if (classString != null) 
+                            driver.ClassString = classString;
+                    }
+                } 
+            }
+            catch (Exception e)
+            {
+                Debug.Console(0, this, "UpdateDriversRequiringAuthString ERROR: {0}", e.Message);
+            }
         }
 
         private void HandleClassUpdated(object sender, Events.StringEventArgs eventArgs)
         {
             try
             {
-                Debug.Console(0, this, "HandleClassUpdated()");
+                //Debug.Console(1, this, "HandleClassUpdated()");
                 if (eventArgs == null)
                     Debug.Console(1, this, "HandleClassUpdated eventArgs == null");
                 else if (eventArgs.Val == null)
                     Debug.Console(1, this, "HandleClassUpdated eventArgs.Val == null");
                 else
-                    Debug.Console(1, this, "HandleClassUpdated {0}", eventArgs.Val);
+                    Debug.Console(1, this, "HandleClassUpdated({0})", eventArgs.Val);
 
                 ClassString = "%" + eventArgs.Val;
-                UpdateDriversRequiringAuthString();
+                UpdateDriversRequiringAuthString(AuthString, ClassString);
                 GetPower();
             }
             catch (Exception e)
@@ -990,10 +1006,10 @@ namespace PJLinkProjectorEpi
         {
             try
             {
-                if (String.IsNullOrEmpty(eventArgs.Val))
+                if (eventArgs.Val == null)
                 {
                     AuthString = String.Empty;
-                    Debug.Console(0, this, "HandleAuthUpdated, eventArgs.val == null", eventArgs.Val);
+                    Debug.Console(0, this, "HandleAuthUpdated, eventArgs.Val == null", eventArgs.Val);
                 }
                 else
                     AuthString = eventArgs.Val;

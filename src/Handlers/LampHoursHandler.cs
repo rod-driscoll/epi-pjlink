@@ -50,7 +50,7 @@ namespace PJLinkProjectorEpi
                     Match result = Regex.Match(response, ErrorResponse + @"(\d)"); //@"LAMP=ERR(\d)"
                     if (result.Success)
                     {
-                        var msg_ = String.Format("Received lamp status ERROR: '{0}'", result.Groups[1].Value);
+                        var msg_ = String.Format("Received lamp status NOTICE: '{0}'", result.Groups[1].Value);
 
                         if (result.Groups[1].Value == "1")
                         {
