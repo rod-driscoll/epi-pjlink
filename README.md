@@ -8,6 +8,11 @@ Provided under MIT license
 
 ## Overview
 
+There are 2 versions:
+
+1. "epi-PjLink-projector.sln" is a VS2008 solution for PepperDash Essentials v1.xx, the classes are in the /src folder.
+2. "./epi-pjlink-v2.0/epi-pjlink-v2.0.sln" is a VS2022 solution for PepperDash Essentials v2.xx.
+
 ## Configuration
 
 ```json
